@@ -3,14 +3,22 @@
 An example of how you can encrypt data to be saved in MongoDb with C#.
 We are using Advanced Encryption Standard algorithm (AES) with Galois Counter Mode (GCM).
 
-You can register the serializer using mongodb's mapping pattern:
+With this approach you can annotate any property of string type with ```ProtectedPersonalData``` attribute:
 
 ```cs
+[ProtectedPersonalData]
+public string CustomerName { get; set; }
+``` 
 
-BsonClassMap.RegisterClassMap<MyClass>(cm =>
+Then register ```ProtectedPersonalDataConvention``` in startup with an extension method:
+
+```cs
+public static void AddMongoDb(this IServiceCollection services)
 {
-    // Here injecting DataSecurityService
-    cm.MapMember(x => x.MyProp).SetSerializer(new EncryptedStringSerializer(securityService));
-});
+    //... other services
 
+    services.AddSingleton<DataSecurityService>();
+    var securityService = services.BuildServiceProvider().GetRequiredService<DataSecurityService>();
+        ConventionsRegister.RegisterConventions(securityService);
+}
 ```

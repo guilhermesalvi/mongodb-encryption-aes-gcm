@@ -4,28 +4,20 @@ using MongoDB.Bson;
 
 namespace MongoDbEncryptionAesGcm;
 
-public class DataSecurityService : IDataSecurityService
+public class DataSecurityService(string encryptionKey)
 {
-    private readonly DataSecuritySettings _settings;
-
-    public DataSecurityService(DataSecuritySettings settings)
-    {
-        _settings = settings;
-    }
-
+    //
+    // You can generate a new 16-byte cryptographically secure key
+    // with the RandomNumberGenerator.Fill(key) method;
+    // Remember to store this key in your vault or other security mechanism
+    //
+    // ex:
+    // var key = new byte[16];
+    // RandomNumberGenerator.Fill(key);
+    //
     public BsonBinaryData Encrypt(string plainText)
     {
-        // Here we are getting the key from the DataSecuritySettings file.
-        //
-        // Instead of getting the key from the configuration file, you can
-        // generate a new 16-byte cryptographically secure key with the
-        // RandomNumberGenerator.Fill(key) method;
-        //
-        // ex:
-        // var key = new byte[16];
-        // RandomNumberGenerator.Fill(key)
-        //
-        var key = Convert.FromBase64String(_settings.EncryptionKey!);
+        var key = Convert.FromBase64String(encryptionKey);
         var iv = new byte[12];
         var tag = new byte[16];
 
@@ -34,7 +26,7 @@ public class DataSecurityService : IDataSecurityService
         var plainBytes = Encoding.UTF8.GetBytes(plainText);
         var cipher = new byte[plainBytes.Length];
 
-        using var aesGcm = new AesGcm(key);
+        using var aesGcm = new AesGcm(key, 16);
         aesGcm.Encrypt(iv, plainBytes, cipher, tag);
 
         var buffer = new byte[iv.Length + tag.Length + cipher.Length];
@@ -54,7 +46,7 @@ public class DataSecurityService : IDataSecurityService
         var decryptedBytes = new byte[cipher.Length];
 
         // Here you must pass the same key generated previously
-        using var aesGcm = new AesGcm(Convert.FromBase64String(_settings.EncryptionKey!));
+        using var aesGcm = new AesGcm(Convert.FromBase64String(encryptionKey), 16);
         aesGcm.Decrypt(iv, cipher, tag, decryptedBytes);
 
         return Encoding.UTF8.GetString(decryptedBytes);

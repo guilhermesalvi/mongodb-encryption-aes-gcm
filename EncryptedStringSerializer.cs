@@ -4,15 +4,9 @@ using MongoDB.Bson.Serialization.Serializers;
 
 namespace MongoDbEncryptionAesGcm;
 
-public class EncryptedStringSerializer : SerializerBase<string?>
+public class EncryptedStringSerializer(DataSecurityService securityService)
+    : SerializerBase<string?>
 {
-    private readonly IDataSecurityService _securityService;
-
-    public EncryptedStringSerializer(IDataSecurityService securityService)
-    {
-        _securityService = securityService;
-    }
-
     public override string? Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
     {
         var type = context.Reader.GetCurrentBsonType();
@@ -23,7 +17,7 @@ public class EncryptedStringSerializer : SerializerBase<string?>
                 context.Reader.ReadNull();
                 return null;
             case BsonType.Binary:
-                var value = _securityService.Decrypt(context.Reader.ReadBinaryData());
+                var value = securityService.Decrypt(context.Reader.ReadBinaryData());
                 return value;
             default:
                 throw new NotSupportedException($"Cannot convert a {type} to a {nameof(String)}");
@@ -38,7 +32,7 @@ public class EncryptedStringSerializer : SerializerBase<string?>
             return;
         }
 
-        var encrypted = _securityService.Encrypt(value);
+        var encrypted = securityService.Encrypt(value);
         context.Writer.WriteBinaryData(encrypted);
     }
 }
